@@ -224,6 +224,52 @@ func (i *Instance) SetLabelsE(t *testing.T, labels map[string]string) error {
 	return nil
 }
 
+func (i *Instance) GetMetadata(t *testing.T) interface{} {
+	return i.Metadata.Items
+}
+
+func (i *Instance) SetMetadata(t *testing.T, metadata map[string]string) {
+	err := i.SetMetadataE(t, metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// SetLabelsE adds the tags to the given Compute Instance.
+func (i *Instance) SetMetadataE(t *testing.T, metadata map[string]string) error {
+	logger.Logf(t, "Adding metadata to instance %s in zone %s", i.Name, i.Zone)
+
+	service, err := NewInstancesServiceE(t)
+	if err != nil {
+		return err
+	}
+
+	metadataItems := newMetadata(t, i.Metadata, metadata)
+	service.SetMetadata(i.projectID, i.Zone, i.Name, metadataItems)
+
+	return nil
+}
+
+func newMetadata(t *testing.T, oldMetadata *compute.Metadata, kvs map[string]string) *compute.Metadata {
+	items := []*compute.MetadataItems{}
+
+	for key, val := range kvs {
+		item := &compute.MetadataItems{
+			Key:   key,
+			Value: &val,
+		}
+
+		items = append(oldMetadata.Items, item)
+	}
+
+	newMetadata := &compute.Metadata{
+		Fingerprint: oldMetadata.Fingerprint,
+		Items:       items,
+	}
+
+	return newMetadata
+}
+
 // DeleteImage deletes the given Compute Image.
 func (i *Image) DeleteImage(t *testing.T) {
 	err := i.DeleteImageE(t)
@@ -411,4 +457,23 @@ func NewComputeServiceE(t *testing.T) (*compute.Service, error) {
 	}
 
 	return service, nil
+}
+
+// NewComputeService creates a new Compute service, which is used to make GCP API calls.
+func NewInstancesService(t *testing.T) *compute.InstancesService {
+	client, err := NewInstancesServiceE(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return client
+}
+
+// NewComputeServiceE creates a new Compute service, which is used to make GCP API calls.
+func NewInstancesServiceE(t *testing.T) (*compute.InstancesService, error) {
+	service, err := NewComputeServiceE(t)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get new Instances Service\n")
+	}
+
+	return service.Instances, nil
 }

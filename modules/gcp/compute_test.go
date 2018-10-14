@@ -99,6 +99,40 @@ func TestGetAndSetLabels(t *testing.T) {
 	})
 }
 
+func TestGetAndSetMetadata(t *testing.T) {
+	t.Parallel()
+
+	instanceName := uniqueGcpInstanceName()
+	projectID := GetGoogleProjectIDFromEnvVar(t)
+	zone := GetRandomZone(t, projectID, nil, nil)
+
+	createComputeInstance(t, projectID, zone, instanceName)
+	defer deleteComputeInstance(t, projectID, zone, instanceName)
+
+	// Now that our Instance is launched, set the metadata. Note that in GCP label keys and values can only contain
+	// lowercase letters, numeric characters, underscores and dashes.
+	instance := FetchInstance(t, projectID, instanceName)
+
+	metadataToWrite := map[string]string{
+		"foo": "bar",
+	}
+	instance.SetMetadata(t, metadataToWrite)
+
+	// Now attempt to read the labels we just set.
+	maxRetries := 10
+	sleepBetweenRetries := 3 * time.Second
+
+	retry.DoWithRetry(t, "Read newly set metadata", maxRetries, sleepBetweenRetries, func() (string, error) {
+		instance := FetchInstance(t, projectID, instanceName)
+		metadataFromRead := instance.GetMetadata(t)
+		if !reflect.DeepEqual(metadataFromRead, metadataToWrite) {
+			return "", fmt.Errorf("Metadata that was written did not match metadata that was read. Retrying.\n")
+		}
+
+		return "", nil
+	})
+}
+
 // Helper function that returns a random, valid name for GCP Compute Instances. Note that GCP requires Instance names to
 // use lowercase letters only.
 func uniqueGcpInstanceName() string {
