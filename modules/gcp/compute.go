@@ -224,7 +224,7 @@ func (i *Instance) SetLabelsE(t *testing.T, labels map[string]string) error {
 	return nil
 }
 
-func (i *Instance) GetMetadata(t *testing.T) interface{} {
+func (i *Instance) GetMetadata(t *testing.T) []*compute.MetadataItems {
 	return i.Metadata.Items
 }
 
@@ -239,13 +239,17 @@ func (i *Instance) SetMetadata(t *testing.T, metadata map[string]string) {
 func (i *Instance) SetMetadataE(t *testing.T, metadata map[string]string) error {
 	logger.Logf(t, "Adding metadata to instance %s in zone %s", i.Name, i.Zone)
 
+	ctx := context.Background()
 	service, err := NewInstancesServiceE(t)
 	if err != nil {
 		return err
 	}
 
 	metadataItems := newMetadata(t, i.Metadata, metadata)
-	service.SetMetadata(i.projectID, i.Zone, i.Name, metadataItems)
+	req := service.SetMetadata(i.projectID, i.GetZone(t), i.Name, metadataItems)
+	if _, err := req.Context(ctx).Do(); err != nil {
+		return fmt.Errorf("Instances.SetMetadata(%s) got error: %v", i.Name, err)
+	}
 
 	return nil
 }
