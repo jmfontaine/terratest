@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/logger"
@@ -254,6 +255,8 @@ func (i *Instance) SetMetadataE(t *testing.T, metadata map[string]string) error 
 	return nil
 }
 
+// newMetadata takes in a Compute Instance's existing metadata plus a new set of key-value pairs and returns an updated
+// metadata object
 func newMetadata(t *testing.T, oldMetadata *compute.Metadata, kvs map[string]string) *compute.Metadata {
 	items := []*compute.MetadataItems{}
 
@@ -272,6 +275,33 @@ func newMetadata(t *testing.T, oldMetadata *compute.Metadata, kvs map[string]str
 	}
 
 	return newMetadata
+}
+
+// Add the given public SSH key to the Compute Instance. Users can login with the given username.
+func (i *Instance) AddSshKey(t *testing.T, username string, publicKey string) {
+	err := i.AddSshKeyE(t, username, publicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Add the given public SSH key to the Compute Instance. Users can login with the given username.
+func (i *Instance) AddSshKeyE(t *testing.T, username string, publicKey string) error {
+	logger.Logf(t, "Adding SSH Key to Compute Instance %s for username %s\n\n", i.Name, username)
+
+	publicKeyFormatted := strings.TrimSpace(publicKey)
+	sshKeyFormatted := fmt.Sprintf("%s:%s %s", username, publicKeyFormatted, username)
+
+	metadata := map[string]string{
+		"ssh-keys": sshKeyFormatted,
+	}
+
+	err := i.SetMetadataE(t, metadata)
+	if err != nil {
+		return fmt.Errorf("Failed to add SSH key to Compute Instance: %s", err)
+	}
+
+	return nil
 }
 
 // DeleteImage deletes the given Compute Image.
@@ -437,7 +467,7 @@ func getRandomInstanceE(t *testing.T, ig InstanceGroup, name string, region stri
 	return instance, nil
 }
 
-// NewComputeService creates a new Compute service, which is used to make GCP API calls.
+// NewComputeService creates a new Compute service, which is used to make GCE API calls.
 func NewComputeService(t *testing.T) *compute.Service {
 	client, err := NewComputeServiceE(t)
 	if err != nil {
@@ -446,7 +476,7 @@ func NewComputeService(t *testing.T) *compute.Service {
 	return client
 }
 
-// NewComputeServiceE creates a new Compute service, which is used to make GCP API calls.
+// NewComputeServiceE creates a new Compute service, which is used to make GCE API calls.
 func NewComputeServiceE(t *testing.T) (*compute.Service, error) {
 	ctx := context.Background()
 
@@ -463,7 +493,7 @@ func NewComputeServiceE(t *testing.T) (*compute.Service, error) {
 	return service, nil
 }
 
-// NewComputeService creates a new Compute service, which is used to make GCP API calls.
+// NewInstancesService creates a new InstancesService service, which is used to make a subset of GCE API calls.
 func NewInstancesService(t *testing.T) *compute.InstancesService {
 	client, err := NewInstancesServiceE(t)
 	if err != nil {
@@ -472,7 +502,7 @@ func NewInstancesService(t *testing.T) *compute.InstancesService {
 	return client
 }
 
-// NewComputeServiceE creates a new Compute service, which is used to make GCP API calls.
+// NewComputeServiceE creates a new InstancesService service, which is used to make a subset of GCE API calls.
 func NewInstancesServiceE(t *testing.T) (*compute.InstancesService, error) {
 	service, err := NewComputeServiceE(t)
 	if err != nil {

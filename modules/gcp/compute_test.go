@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gruntwork-io/terratest/modules/ssh"
+
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/retry"
 	"github.com/magiconair/properties/assert"
@@ -99,25 +101,23 @@ func TestGetAndSetLabels(t *testing.T) {
 	})
 }
 
+// Set custom metadata on a Compute Instance, and then verify it was set as expected
 func TestGetAndSetMetadata(t *testing.T) {
 	t.Parallel()
 
-	instanceName := "terratest-sa3wku"
-
 	projectID := GetGoogleProjectIDFromEnvVar(t)
-	//instanceName := uniqueGcpInstanceName()
-	//zone := GetRandomZone(t, projectID, nil, nil)
+	instanceName := uniqueGcpInstanceName()
+	zone := GetRandomZone(t, projectID, nil, nil)
 
-	//createComputeInstance(t, projectID, zone, instanceName)
-	//defer deleteComputeInstance(t, projectID, zone, instanceName)
+	createComputeInstance(t, projectID, zone, instanceName)
+	defer deleteComputeInstance(t, projectID, zone, instanceName)
 
 	// Now that our Instance is launched, set the metadata. Note that in GCP label keys and values can only contain
 	// lowercase letters, numeric characters, underscores and dashes.
 	instance := FetchInstance(t, projectID, instanceName)
 
 	metadataToWrite := map[string]string{
-		"foo":      "bar",
-		"ssh-keys": "abc",
+		"foo": "bar",
 	}
 	instance.SetMetadata(t, metadataToWrite)
 
@@ -129,12 +129,72 @@ func TestGetAndSetMetadata(t *testing.T) {
 		instance := FetchInstance(t, projectID, instanceName)
 		metadataFromRead := instance.GetMetadata(t)
 		for _, metadataItem := range metadataFromRead {
-			fmt.Printf("%s: %s\n", metadataItem.Key, *metadataItem.Value)
+			for key, val := range metadataToWrite {
+				if metadataItem.Key == key && *metadataItem.Value == val {
+					return "", nil
+				}
+			}
 		}
 
-		//if !reflect.DeepEqual(metadataFromRead, metadataToWrite) {
-		//	return "", fmt.Errorf("Metadata that was written did not match metadata that was read. Retrying.\n")
-		//}
+		return "", fmt.Errorf("Metadata that was written was not found in metadata that was read. Retrying.\n")
+	})
+}
+
+// Create a Compute Instance, and attempt to SSH in and run a command.
+func TestSshAccessToComputeInstance(t *testing.T) {
+	t.Parallel()
+
+	projectID := GetGoogleProjectIDFromEnvVar(t)
+	instanceName := uniqueGcpInstanceName()
+	zone := GetRandomZone(t, projectID, nil, nil)
+
+	// Create the Compute Instance
+	createComputeInstance(t, projectID, zone, instanceName)
+	defer deleteComputeInstance(t, projectID, zone, instanceName)
+
+	// Get the public IP
+	var instance *Instance
+	var publicIp string
+
+	maxRetries := 10
+	sleepBetweenRetries := 3 * time.Second
+
+	retry.DoWithRetry(t, "Attempting to get public IP address", maxRetries, sleepBetweenRetries, func() (string, error) {
+		instance = FetchInstance(t, projectID, instanceName)
+
+		publicIp = instance.GetPublicIp(t)
+		if publicIp == "" {
+			return "", fmt.Errorf("Public IP address was blank")
+		}
+
+		return "", nil
+	})
+
+	// Attempt to SSH and execute the command
+	sampleText := "Hello World"
+	sshUsername := "terratest"
+
+	keyPair := ssh.GenerateRSAKeyPair(t, 2048)
+	instance.AddSshKey(t, sshUsername, keyPair.PublicKey)
+
+	host := ssh.Host{
+		Hostname:    publicIp,
+		SshKeyPair:  keyPair,
+		SshUserName: sshUsername,
+	}
+
+	maxRetries = 20
+	sleepBetweenRetries = 3 * time.Second
+
+	retry.DoWithRetry(t, "Attempting to SSH", maxRetries, sleepBetweenRetries, func() (string, error) {
+		output, err := ssh.CheckSshCommandE(t, host, fmt.Sprintf("echo '%s'", sampleText))
+		if err != nil {
+			return "", err
+		}
+
+		if strings.TrimSpace(sampleText) != strings.TrimSpace(output) {
+			return "", fmt.Errorf("Expected: %s. Got: %s\n", sampleText, output)
+		}
 
 		return "", nil
 	})
