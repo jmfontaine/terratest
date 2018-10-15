@@ -162,6 +162,18 @@
   version = "v1.8.0"
 
 [[projects]]
+  digest = "1:c8d00f8d5b900f252da7f4a2cf618043bd1c833333d210281e21a69121cc87d0"
+  name = "github.com/oracle/oci-go-sdk"
+  packages = [
+    "common",
+    "core",
+    "identity",
+  ]
+  pruneopts = "UT"
+  revision = "37ec848b9622efd149232580c77a7a168f0f35ef"
+  version = "v2.6.0"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -295,7 +307,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a124d2ef8b444eee0f0bf419136052570947651dd738cf220b1cd1cea669ddc6"
+  digest = "1:43867bae2f0dac0e62e6fb220f7e56dba3edba4f605bbe9f0b59e01fc3d13bc6"
   name = "google.golang.org/api"
   packages = [
     "compute/v1",
@@ -404,6 +416,9 @@
     "github.com/go-sql-driver/mysql",
     "github.com/google/uuid",
     "github.com/magiconair/properties/assert",
+    "github.com/oracle/oci-go-sdk/common",
+    "github.com/oracle/oci-go-sdk/core",
+    "github.com/oracle/oci-go-sdk/identity",
     "github.com/pquerna/otp/totp",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
