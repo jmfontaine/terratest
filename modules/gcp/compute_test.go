@@ -109,11 +109,11 @@ func TestGetAndSetMetadata(t *testing.T) {
 	instanceName := uniqueGcpInstanceName()
 	zone := GetRandomZone(t, projectID, nil, nil)
 
+	// Create a new Compute Instance
 	createComputeInstance(t, projectID, zone, instanceName)
 	defer deleteComputeInstance(t, projectID, zone, instanceName)
 
-	// Now that our Instance is launched, set the metadata. Note that in GCP label keys and values can only contain
-	// lowercase letters, numeric characters, underscores and dashes.
+	// Set the metadata
 	instance := FetchInstance(t, projectID, instanceName)
 
 	metadataToWrite := map[string]string{
@@ -121,7 +121,7 @@ func TestGetAndSetMetadata(t *testing.T) {
 	}
 	instance.SetMetadata(t, metadataToWrite)
 
-	// Now attempt to read the labels we just set.
+	// Now attempt to read the metadata we just set
 	maxRetries := 10
 	sleepBetweenRetries := 3 * time.Second
 

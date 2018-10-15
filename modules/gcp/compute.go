@@ -225,10 +225,12 @@ func (i *Instance) SetLabelsE(t *testing.T, labels map[string]string) error {
 	return nil
 }
 
+// GetMetadata gets the given Compute Instance's metadata
 func (i *Instance) GetMetadata(t *testing.T) []*compute.MetadataItems {
 	return i.Metadata.Items
 }
 
+// SetMetadata sets the given Compute Instance's metadata
 func (i *Instance) SetMetadata(t *testing.T, metadata map[string]string) {
 	err := i.SetMetadataE(t, metadata)
 	if err != nil {
@@ -236,7 +238,7 @@ func (i *Instance) SetMetadata(t *testing.T, metadata map[string]string) {
 	}
 }
 
-// SetLabelsE adds the tags to the given Compute Instance.
+// SetLabelsE adds the given metadata map to the existing metadata of the given Compute Instance.
 func (i *Instance) SetMetadataE(t *testing.T, metadata map[string]string) error {
 	logger.Logf(t, "Adding metadata to instance %s in zone %s", i.Name, i.Zone)
 
@@ -256,7 +258,7 @@ func (i *Instance) SetMetadataE(t *testing.T, metadata map[string]string) error 
 }
 
 // newMetadata takes in a Compute Instance's existing metadata plus a new set of key-value pairs and returns an updated
-// metadata object
+// metadata object.
 func newMetadata(t *testing.T, oldMetadata *compute.Metadata, kvs map[string]string) *compute.Metadata {
 	items := []*compute.MetadataItems{}
 
@@ -277,7 +279,7 @@ func newMetadata(t *testing.T, oldMetadata *compute.Metadata, kvs map[string]str
 	return newMetadata
 }
 
-// Add the given public SSH key to the Compute Instance. Users can login with the given username.
+// Add the given public SSH key to the Compute Instance. Users can SSH in with the given username.
 func (i *Instance) AddSshKey(t *testing.T, username string, publicKey string) {
 	err := i.AddSshKeyE(t, username, publicKey)
 	if err != nil {
@@ -285,9 +287,9 @@ func (i *Instance) AddSshKey(t *testing.T, username string, publicKey string) {
 	}
 }
 
-// Add the given public SSH key to the Compute Instance. Users can login with the given username.
+// Add the given public SSH key to the Compute Instance. Users can SSH in with the given username.
 func (i *Instance) AddSshKeyE(t *testing.T, username string, publicKey string) error {
-	logger.Logf(t, "Adding SSH Key to Compute Instance %s for username %s\n\n", i.Name, username)
+	logger.Logf(t, "Adding SSH Key to Compute Instance %s for username %s\n", i.Name, username)
 
 	publicKeyFormatted := strings.TrimSpace(publicKey)
 	sshKeyFormatted := fmt.Sprintf("%s:%s %s", username, publicKeyFormatted, username)
@@ -502,7 +504,7 @@ func NewInstancesService(t *testing.T) *compute.InstancesService {
 	return client
 }
 
-// NewComputeServiceE creates a new InstancesService service, which is used to make a subset of GCE API calls.
+// NewInstancesServiceE creates a new InstancesService service, which is used to make a subset of GCE API calls.
 func NewInstancesServiceE(t *testing.T) (*compute.InstancesService, error) {
 	service, err := NewComputeServiceE(t)
 	if err != nil {
